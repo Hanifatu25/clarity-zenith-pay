@@ -20,6 +20,7 @@ ZenithPay enables fast and secure international payments using Bitcoin as the se
 - Manage transaction fees
 - Handle payment disputes and timeouts
 - Query payment status and history
+- Automatic payment refunds after timeout period
 
 ## Getting Started
 
@@ -27,3 +28,11 @@ ZenithPay enables fast and secure international payments using Bitcoin as the se
 2. Initialize a payment channel
 3. Register Bitcoin addresses
 4. Execute payments through the channel
+
+## Payment Protection
+
+The contract now includes a timeout mechanism that protects senders from unresponsive receivers:
+
+- When a payment is executed, a 144-block timeout period begins (~24 hours)
+- If the receiver doesn't confirm the payment within this period, the sender can reclaim their funds
+- This prevents funds from being locked indefinitely in case of receiver inaction
