@@ -1,7 +1,7 @@
 ;; ZenithPay Contract
 ;; Handles cross-border payments using Bitcoin
 
-;; Constants
+;; Constants 
 (define-constant contract-owner tx-sender)
 (define-constant err-unauthorized (err u100))
 (define-constant err-invalid-address (err u101))
@@ -9,6 +9,7 @@
 (define-constant err-channel-not-found (err u103))
 (define-constant err-insufficient-funds (err u104))
 (define-constant err-invalid-state (err u105))
+(define-constant err-refund-not-allowed (err u106))
 
 ;; Data vars
 (define-data-var fee-rate uint u100) ;; basis points
@@ -82,7 +83,8 @@
                     { channel-id: channel-id }
                     (merge channel {
                         balance: (- (get balance channel) amount),
-                        state: "PENDING"
+                        state: "PENDING",
+                        timeout: (+ block-height u144)
                     })
                 )
                 (ok true))
@@ -101,11 +103,33 @@
                 (map-set PaymentChannels
                     { channel-id: channel-id }
                     (merge channel {
-                        state: "ACTIVE"
+                        state: "ACTIVE",
+                        timeout: u0
                     })
                 )
                 (ok true))
             err-invalid-state)
+    )
+)
+
+;; Refund expired payment
+(define-public (refund-payment (channel-id uint))
+    (let
+        ((channel (unwrap! (map-get? PaymentChannels { channel-id: channel-id }) err-channel-not-found)))
+        (if (and
+                (is-eq (get sender channel) tx-sender)
+                (is-eq (get state channel) "PENDING")
+                (>= block-height (get timeout channel)))
+            (begin
+                (map-set PaymentChannels
+                    { channel-id: channel-id }
+                    (merge channel {
+                        state: "ACTIVE",
+                        timeout: u0
+                    })
+                )
+                (ok true))
+            err-refund-not-allowed)
     )
 )
 
